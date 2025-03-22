@@ -35,33 +35,44 @@ def finetune_lora():
     model.print_trainable_parameters()
 
     def tokenize_function(examples):
-        instructions = examples["instruction"] #  提取 instruction 字段
-        outputs = examples["output"] # 提取 output 字段
-
-        # 1. 拼接 instructions 和 outputs 列表，并添加 EOS token
+        instructions = examples["instruction"]
+        outputs = examples["output"]
         full_texts = ["instruction: " + instruction + " output: " + output + tokenizer.eos_token for instruction, output in zip(instructions, outputs)]
-
-        # 2. 使用 tokenizer 对 *整个 batch* 的 full_texts 进行 tokenize，并应用 padding 和 truncation
-        tokenized_inputs = tokenizer(full_texts, truncation=True, padding=True, return_tensors="pt") # padding=True 或 padding='longest' 都可以
-
-        input_ids = tokenized_inputs.input_ids
-        attention_mask = tokenized_inputs.attention_mask
-        labels = input_ids.clone()
-
-        # 3. 批量计算 instruction 部分的长度并屏蔽 labels
-        instruction_parts = ["instruction: " + instruction + " output: " for instruction in instructions]
-        tokenized_instruction_parts = tokenizer(instruction_parts, truncation=True, padding=True, return_tensors="pt")
-        instruction_lens = [input_ids.shape[1] for input_ids in tokenized_instruction_parts.input_ids] # 获取每个instruction的长度
-
-        # 4. 批量屏蔽 instruction 部分的 labels
-        for i, instruction_len in enumerate(instruction_lens):
-            labels[i, :instruction_len] = -100
-
+        tokenized_inputs = tokenizer(full_texts, truncation=True, padding=True, return_tensors="pt")
         return {
-            "input_ids": input_ids,
-            "attention_mask": attention_mask,
-            "labels": labels  # 返回屏蔽后的 labels
+            "input_ids": tokenized_inputs.input_ids,
+            "attention_mask": tokenized_inputs.attention_mask,
+            # 暂时不处理 labels
         }
+
+    # def tokenize_function(examples):
+    #     instructions = examples["instruction"] #  提取 instruction 字段
+    #     outputs = examples["output"] # 提取 output 字段
+
+    #     # 1. 拼接 instructions 和 outputs 列表，并添加 EOS token
+    #     full_texts = ["instruction: " + instruction + " output: " + output + tokenizer.eos_token for instruction, output in zip(instructions, outputs)]
+
+    #     # 2. 使用 tokenizer 对 *整个 batch* 的 full_texts 进行 tokenize，并应用 padding 和 truncation
+    #     tokenized_inputs = tokenizer(full_texts, truncation=True, padding=True, return_tensors="pt") # padding=True 或 padding='longest' 都可以
+
+    #     input_ids = tokenized_inputs.input_ids
+    #     attention_mask = tokenized_inputs.attention_mask
+    #     labels = input_ids.clone()
+
+    #     # 3. 批量计算 instruction 部分的长度并屏蔽 labels
+    #     instruction_parts = ["instruction: " + instruction + " output: " for instruction in instructions]
+    #     tokenized_instruction_parts = tokenizer(instruction_parts, truncation=True, padding=True, return_tensors="pt")
+    #     instruction_lens = [input_ids.shape[1] for input_ids in tokenized_instruction_parts.input_ids] # 获取每个instruction的长度
+
+    #     # 4. 批量屏蔽 instruction 部分的 labels
+    #     for i, instruction_len in enumerate(instruction_lens):
+    #         labels[i, :instruction_len] = -100
+
+    #     return {
+    #         "input_ids": input_ids,
+    #         "attention_mask": attention_mask,
+    #         "labels": labels  # 返回屏蔽后的 labels
+    #     }
 
     tokenized_dataset = train_dataset.map(tokenize_function, batched=True)
     tokenized_dataset.set_format("torch", columns=["input_ids", "attention_mask", "labels"]) #  现在包含 labels 列
