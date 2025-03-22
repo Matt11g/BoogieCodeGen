@@ -51,7 +51,7 @@ def finetune_lora():
         # 3. 批量计算 instruction 部分的长度并屏蔽 labels
         instruction_parts = ["instruction: " + instruction + " output: " for instruction in instructions]
         tokenized_instruction_parts = tokenizer(instruction_parts, truncation=True, padding=True, return_tensors="pt")
-        instruction_lens = [input_ids.shape[1] for input_ids in tokenized_instruction_parts.input_ids] # 获取每个instruction的长度
+        instruction_lens = [input_ids.size(0) for input_ids in tokenized_instruction_parts.input_ids]
 
         # 4. 批量屏蔽 instruction 部分的 labels
         for i, instruction_len in enumerate(instruction_lens):
@@ -91,7 +91,6 @@ def finetune_lora():
                                     #'attention_mask': torch.stack([f['attention_mask'] for f in data]),
                                     #'labels': torch.stack([f['labels'] for f in data])}
         data_collator=DataCollatorForLanguageModeling(tokenizer, mlm=False), # 或者使用这个更通用的 data collator，mlm=False 因为我们不是 masked language modeling
-        abel_names=["labels"],
     )
 
     # 开始训练
@@ -99,7 +98,7 @@ def finetune_lora():
 
     # 保存 LoRA adapters
     model.save_pretrained(LORA_ADAPTERS_PATH)
-    print("LoRA 微调完成！LoRA adapters 已保存到 ./lora-starcoder2-3b-adapters 目录。")
+    print(f"LoRA 微调完成！LoRA adapters 已保存到 {LORA_ADAPTERS_PATH} 目录。")
 
 
 if __name__ == "__main__":

@@ -1,12 +1,12 @@
 # Boogie Code Generation with Large Language Model (LoRA Fine-tuning)
 
-This project demonstrates how to use a Large Language Model (specifically StarCoder2-3B) to generate Boogie code, and how to fine-tune the model using LoRA (Low-Rank Adaptation) for improved Boogie code generation capabilities.
+This project demonstrates how to use a Large Language Model to generate Boogie code, and how to fine-tune the model using LoRA (Low-Rank Adaptation) for improved Boogie code generation capabilities.
 
 ## File Structure
 
 *   `boogie_code_generator.py`: Contains the `generate_code` function for generating Boogie code using a pre-trained or fine-tuned model.
-*   `boogie_finetuned_code_generator.py`: Contains the `generate_code` function for generating Boogie code using the **LoRA fine-tuned StarCoder2-3B model**. This script loads and utilizes the fine-tuned LoRA adapters.
-*   `boogie_lora_finetune.py`: Contains the code for LoRA fine-tuning of StarCoder2-3B on a Boogie code dataset.
+*   `boogie_finetuned_code_generator.py`: Contains the `generate_code` function for generating Boogie code using the **LoRA fine-tuned model**. This script loads and utilizes the fine-tuned LoRA adapters.
+*   `boogie_finetune.py`: Contains the code for LoRA fine-tuning of a specific model on a Boogie code dataset.
 *   `model_config.py`: Contains configuration parameters for the model, LoRA, and training.
 *   `requirements.txt`: Lists the Python library dependencies for the project.
 *   `README.md`: This file, providing a project overview.
@@ -33,7 +33,7 @@ You have two options for generating Boogie code:
 
 #### a) Generate Boogie Code with the Pre-trained Model (Baseline)
 
-To generate Boogie code using the original, pre-trained StarCoder2-3B model (without fine-tuning), run:
+To generate Boogie code using the original, pre-trained large language model (without fine-tuning), run:
 
 ```
 from boogie_code_generator import generate_code
@@ -51,7 +51,7 @@ python boogie_code_generator.py
 
 #### b) Generate Boogie Code with the LoRA Fine-tuned Model
 
-To generate Boogie code using the LoRA fine-tuned StarCoder2-3B model, run:
+To generate Boogie code using the LoRA fine-tuned model, run:
 
 ```
 from boogie_finetuned_code_generator import generate_code

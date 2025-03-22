@@ -1,5 +1,4 @@
-# boogie_code_generator.py
-from transformers import AutoModelForCausalLM, AutoTokenizer, StoppingCriteria, StoppingCriteriaList
+from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 from model_config import MODEL_NAME, DEVICE
 
@@ -12,7 +11,7 @@ model = AutoModelForCausalLM.from_pretrained(MODEL_NAME).to(DEVICE)
 
 
 def generate_code(instruction, max_length=200):
-    prompt = f"Write a Boogie procedure to {instruction}:\n```boogie\n" #  更灵活的 prompt 构建
+    prompt = f"instruction:{instruction} output:\n```boogie"
     inputs = tokenizer(prompt, return_tensors="pt").to(DEVICE)
 
     outputs = model.generate(
@@ -28,6 +27,6 @@ def generate_code(instruction, max_length=200):
 
 
 if __name__ == "__main__":
-    user_instruction = "calculate the factorial of a number\n"
+    user_instruction = "write a Boogie procedure to calculate the factorial of a number\n"
     generated_code = generate_code(user_instruction)
     print("Generated Boogie Code:\n", generated_code)
