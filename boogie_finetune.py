@@ -50,7 +50,7 @@ def finetune_lora():
 
         # 3. 批量计算 instruction 部分的长度并屏蔽 labels
         instruction_parts = ["instruction: " + instruction + " output: " for instruction in instructions]
-        tokenized_instruction_parts = tokenizer(instruction_parts, truncation=True, padding=False, return_tensors="pt") # padding=False，只计算长度
+        tokenized_instruction_parts = tokenizer(instruction_parts, truncation=True, padding=True, return_tensors="pt")
         instruction_lens = [input_ids.shape[1] for input_ids in tokenized_instruction_parts.input_ids] # 获取每个instruction的长度
 
         # 4. 批量屏蔽 instruction 部分的 labels
