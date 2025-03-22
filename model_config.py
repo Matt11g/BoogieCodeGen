@@ -21,7 +21,6 @@ REPORT_TO = "tensorboard"
 SAVE_STEPS = 100
 SAVE_TOTAL_LIMIT = 2
 PUSH_TO_HUB = False
-LABEL_NAMES = ["labels"]
 
 #
 LORA_ADAPTERS_PATH = "./lora-starcoder2-3b-adapters"
