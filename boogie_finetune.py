@@ -38,33 +38,72 @@ def finetune_lora():
         instructions = examples["instruction"] #  提取 instruction 字段
         outputs = examples["output"] # 提取 output 字段
 
-        # 1. 拼接 instructions 和 outputs 列表，并添加 EOS token
-        full_texts = ["instruction: " + instruction + " output: " + output + tokenizer.eos_token for instruction, output in zip(instructions, outputs)]
+        # 1. 构建instruction 部分；拼接 instructions 和 outputs 列表，并添加 EOS token
+        prompt_texts = ["instruction: " + instruction + " output: " for instruction in instructions]
+        full_texts = [prompt + output + tokenizer.eos_token for prompt, output in zip(prompt_texts, outputs)]
 
-        # 2. 使用 tokenizer 对 *整个 batch* 的 full_texts 进行 tokenize，并应用 padding 和 truncation
-        tokenized_inputs = tokenizer(full_texts, truncation=True, padding=True, max_length=512, return_tensors="pt")
+        # 2. Tokenize 完整的文本 (应用 padding 和 truncation)；Tokenize 仅包含提示（指令）的部分 (不 padding, 不 truncation)
+        tokenized_full = tokenizer(
+            full_texts, 
+            truncation=True, 
+            padding="max_length", # 或者 'longest', 或者 False 如果用 DataCollator
+            max_length=512,
+            return_tensors=None, # 返回 list，方便后面处理
+            add_special_tokens=False # eos_token 已手动添加，这里避免重复添加 (如果适用)
+        )
 
-        input_ids = tokenized_inputs.input_ids
-        attention_mask = tokenized_inputs.attention_mask
-        labels = input_ids.clone()
+        tokenized_prompts = tokenizer(
+            prompt_texts,
+            truncation=False, # 不需要截断
+            padding=False,    # 不需要填充
+            return_tensors=None, # 返回 list
+            add_special_tokens=False # 同上
+        )
 
-        # 3. 批量计算 instruction 部分的长度并屏蔽 labels
-        instruction_parts = ["instruction: " + instruction + " output: " for instruction in instructions]
-        tokenized_instruction_parts = tokenizer(instruction_parts, truncation=True, padding=True, return_tensors="pt")
-        instruction_lens = [input_ids.size(0) for input_ids in tokenized_instruction_parts.input_ids]
+        input_ids = tokenized_full['input_ids']
+        attention_mask = tokenized_full['attention_mask']
+        labels = [list(ids) for ids in input_ids] # 转为 list of lists 方便修改
 
-        # 4. 批量屏蔽 instruction 部分的 labels
-        for i, instruction_len in enumerate(instruction_lens):
-            labels[i, :instruction_len] = -100
+        # 3. 根据提示部分的实际长度来屏蔽 labels
+        for i in range(len(labels)):
+            prompt_len = len(tokenized_prompts['input_ids'][i])
+            # 确保屏蔽长度不超过 labels 的实际长度 (考虑 truncation)
+            actual_prompt_len_in_labels = min(prompt_len, len(labels[i]))
+            for j in range(actual_prompt_len_in_labels):
+                labels[i][j] = -100
+
+            # 可选：如果 output 部分也被截断了，可以考虑将末尾的 padding token 也设为 -100
+            # (如果使用了 DataCollatorForLanguageModeling，它通常会自动处理 padding 部分的 label)
+            # 如果在这里手动 padding='max_length'，需要找到 padding 的起始位置
+            # try:
+            #     pad_start_index = attention_mask[i].index(0) # 找到第一个0 (padding token)
+            #     for k in range(pad_start_index, len(labels[i])):
+            #          labels[i][k] = -100
+            # except ValueError: # 没有 padding token
+            #     pass
+
+
+        # 将 list 转回 tensor (如果前面没用 return_tensors="pt")
+        input_ids_tensor = torch.tensor(input_ids)
+        attention_mask_tensor = torch.tensor(attention_mask)
+        labels_tensor = torch.tensor(labels)
+
 
         return {
-            "input_ids": input_ids,
-            "attention_mask": attention_mask,
-            "labels": labels
+            # 返回 Tensor
+            "input_ids": input_ids_tensor,
+            "attention_mask": attention_mask_tensor,
+            "labels": labels_tensor
         }
 
-    tokenized_dataset = train_dataset.map(tokenize_function, batched=True)
-    tokenized_dataset.set_format("torch", columns=["input_ids", "attention_mask", "labels"])
+    # 在 map 时，可能需要设置 batched=True, batch_size=合理值
+    tokenized_dataset = train_dataset.map(
+        tokenize_function,
+        batched=True, # 批量处理效率更高
+        # batch_size=1000, # 可以指定批大小
+        remove_columns=train_dataset.column_names # 移除原始列
+    )
+    # tokenized_dataset.set_format("torch") # 不再需要，因为 tokenize_function 已返回 tensor
     train_dataset = tokenized_dataset
 
     # 设置训练参数
